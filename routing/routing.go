@@ -197,6 +197,7 @@ func (route *Route) relay() {
 
 type Routes struct {
 	Map      map[string]*Route
+	KeyList  []string
 	lock     sync.Mutex
 	SpoolDir string
 }
@@ -228,7 +229,8 @@ func (routes *Routes) Dispatch(buf []byte, first_only bool) (routed bool) {
 	//fmt.Println("entering dispatch")
 	routes.lock.Lock()
 	defer routes.lock.Unlock()
-	for _, route := range routes.Map {
+	for _, key := range routes.KeyList {
+		route := routes.Map[key]
 		if route.Reg.Match(buf) {
 			routed = true
 			//fmt.Println("routing to " + route.Key)
