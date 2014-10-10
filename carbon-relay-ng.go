@@ -21,6 +21,7 @@ import (
 	"os"
 	"regexp"
 	"runtime/pprof"
+	"strings"
 )
 
 type StatsdConfig struct {
@@ -89,6 +90,7 @@ func handle(c *net.TCPConn, config Config) {
 }
 
 func Router() {
+	fmt.Printf("config.First_only: %v", config.First_only)
 	for buf := range to_dispatch {
 		routed := routes.Dispatch(buf, config.First_only)
 		if !routed {
@@ -331,12 +333,15 @@ func main() {
 	if 1 == flag.NArg() {
 		config_file = flag.Arg(0)
 	}
-
-	if _, err := toml.DecodeFile(config_file, &config); err != nil {
+	var metadata toml.MetaData
+	if md, err := toml.DecodeFile(config_file, &config); err != nil {
 		fmt.Printf("Cannot use config file '%s':\n", config_file)
 		fmt.Println(err)
 		return
+	} else {
+		metadata = md
 	}
+
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -353,6 +358,16 @@ func main() {
 		log.Println(err)
 		os.Exit(1)
 	}
+
+	for _, key := range metadata.Keys() {
+		str := key.String()
+		if strings.Count(str, ".") == 1 {
+			if strings.Index(str, "routes.") == 0 {
+				routes.KeyList = append(routes.KeyList, str[7:])
+			}
+		}
+	}
+
 	err = routes.Run()
 	if err != nil {
 		log.Println(err)
